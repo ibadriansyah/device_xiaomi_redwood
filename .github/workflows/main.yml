@@ -4,29 +4,27 @@ on:
   workflow_dispatch:
     inputs:
       MANIFEST_BRANCH:
-        description: 'Branch OrangeFox'
+        description: 'Branch OrangeFox (contoh: fox_12.1)'
         required: true
-        default: 'fox_12.0'
+        default: 'fox_12.1'
         type: choice
         options:
-          - fox_12.0
           - fox_12.1
           - fox_11.0
       DEVICE_TREE:
-        description: 'Url Device Tree'
+        description: 'URL Repository Device Tree'
         required: true
         type: string
       DEVICE_TREE_BRANCH:
         description: 'Branch Device Tree'
         required: true
-        default: 'yaap-sixteen'
         type: string
       DEVICE_PATH:
-        description: 'Path Device'
+        description: 'Path Device (contoh: device/xiaomi/redwood)'
         required: true
         type: string
       DEVICE_NAME:
-        description: 'redwood'
+        description: 'Device Codename (contoh: redwood)'
         required: true
         type: string
 
@@ -55,7 +53,7 @@ jobs:
           curl https://storage.googleapis.com/git-repo-downloads/repo > ~/.bin/repo
           chmod a+rx ~/.bin/repo
 
-      - name: Initialize OrangeFox Source
+      - name: Initialize OrangeFox Source & Sync
         run: |
           mkdir workspace
           cd workspace
@@ -69,7 +67,7 @@ jobs:
           cd workspace
           git clone ${{ inputs.DEVICE_TREE }} -b ${{ inputs.DEVICE_TREE_BRANCH }} ${{ inputs.DEVICE_PATH }}
 
-      - name: Start Building OrangeFox
+      - name: Start Building OrangeFox (Boot Image Target)
         run: |
           cd workspace
           export ALLOW_MISSING_DEPENDENCIES=true

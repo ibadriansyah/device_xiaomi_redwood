@@ -4,13 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       MANIFEST_BRANCH:
-        description: 'Branch OrangeFox (contoh: fox_12.1)'
+        description: 'Branch OrangeFox (contoh: 12.1)'
         required: true
-        default: 'fox_12.1'
+        default: '12.1'
         type: choice
         options:
-          - fox_12.1
-          - fox_11.0
+          - '12.1'
+          - '14.1'
       DEVICE_TREE:
         description: 'URL Repository Device Tree'
         required: true
@@ -34,6 +34,56 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+
+      - name: Free Up Disk Space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+          android: true
+
+      - name: Install Build Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bc bison build-essential ccache curl flex g++-multilib gcc-multilib git gnupg gperf imagemagick lib32ncurses5-dev lib32readline-dev lib32z1-dev liblz4-tool libncurses5 libncurses5-dev libsdl1.2-dev libssl-dev libxml2 libxml2-utils lzop pngcrush rsync schedtool squashfs-tools xsltproc yasm zip zlib1g-dev
+
+      - name: Install Repo Tool
+        run: |
+          mkdir -p ~/.bin
+          PATH="${HOME}/.bin:${PATH}"
+          curl https://storage.googleapis.com/git-repo-downloads/repo > ~/.bin/repo
+          chmod a+rx ~/.bin/repo
+
+      - name: Sync OrangeFox Using Official Script
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          
+          # Menggunakan metode resmi OrangeFox Wiki
+          mkdir -p ~/OrangeFox_sync
+          cd ~/OrangeFox_sync
+          git clone https://gitlab.com/OrangeFox/sync.git
+          
+          cd sync
+          # Menjalankan script sync resmi sesuai branch pilihan
+          ./orangefox_sync.sh --branch ${{ inputs.MANIFEST_BRANCH }} --path ~/fox_${{ inputs.MANIFEST_BRANCH }}
+
+      - name: Clone Device Tree
+        run: |
+          cd ~/fox_${{ inputs.MANIFEST_BRANCH }}
+          git clone ${{ inputs.DEVICE_TREE }} -b ${{ inputs.DEVICE_TREE_BRANCH }} ${{ inputs.DEVICE_PATH }}
+
+      - name: Start Building OrangeFox (Boot Image Target)
+        run: |
+          cd ~/fox_${{ inputs.MANIFEST_BRANCH }}
+          export ALLOW_MISSING_DEPENDENCIES=true
+          source build/envsetup.sh
+          lunch fox_${{ inputs.DEVICE_NAME }}-eng && mka bootimage
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: OrangeFox-${{ inputs.DEVICE_NAME }}-boot
+          path: /home/runner/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/boot.img
 
       - name: Free Up Disk Space
         uses: jlumbroso/free-disk-space@main
